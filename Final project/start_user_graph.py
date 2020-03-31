@@ -51,7 +51,7 @@ for i in range(len(unique_trans)):
     inputkeys.iloc[i]['keys'] = slice_trans["inputs.input_pubkey_base58"][slice_trans["transaction_id"][:]==unique_trans[i]].values
 """
 
-max_user = users_feb_jun_15.shape[0]
+#max_user = users_feb_jun_15.shape[0]
 
 transactions = pd.DataFrame(index = slice_trans["transaction_id"].unique(), columns = ['date', 'input_keys', 'output_keys', 'input_users', 'output_users']) #inputkeys
 #outputkeys = pd.DataFrame(index = slice_trans["transaction_id"].unique(), columns = ['keys'])
@@ -78,11 +78,16 @@ for i in range(len(unique_trans)):
         if output_key in users_feb_jun_15:
             output_users[j] =  np.argwhere(users_feb_jun_15 == output_key)[0,0]
         else:
-            output_users[j] = max_user
-            max_user += 1
+            new_user = np.zeros((1,users_feb_jun_15.shape[1]), dtype = "object")
+            new_user[:,:] = ''
+            new_user[0,0] = output_key
+            users_feb_jun_15 = np.concatenate((users_feb_jun_15, new_user),axis = 0)
+            output_users[j] =  np.argwhere(users_feb_jun_15 == output_key)[0,0]
+            #output_users[j] = max_user
+            #max_user += 1
     transactions.iloc[i]['output_users'] = np.unique(output_users)
     
-
+transactions.to_json(r'transactions_feb_jun_15.json')
 
 #%%
 delta_days = (date_before - date_after).days
