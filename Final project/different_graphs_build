@@ -44,7 +44,7 @@ slice_trans = df_half = df_half[df_half["timestamp"]<date_before]
 unique_keys_in = slice_trans["inputs.input_pubkey_base58"].unique()
 unique_keys_out = slice_trans["outputs.output_pubkey_base58"].unique()
 unique_keys = np.unique(np.union1d(unique_keys_in, unique_keys_out))
-n_new_keys_out = len(unique_keys) - len(unique_keys_in)
+n_new_keys_out = len(unique_keys) + 1 - len(unique_keys_in)
 
 new_users = np.zeros((n_new_keys_out,users_feb_jun_15.shape[1]), dtype = "object")
 new_users[:,:] = ''
