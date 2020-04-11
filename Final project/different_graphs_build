@@ -92,8 +92,8 @@ for i in range(delta_days):
                 users_feb_jun_15[max_user,0] = okey
             value = np.sum(trans['outputs.output_satoshis'][trans['outputs.output_pubkey_base58'][:] == okey])
             graph_dict[i].append([input_user, output_user, value])
-            graph_activity[input_user, output_user, i] += 1
-            graph_value[input_user, output_user, i] += value
+            graph_activity[input_user, output_user, i:] += 1
+            graph_value[input_user, output_user, i:] += value
             user_activity_in2[input_user] += 1 #don't know what is fair: count input users once per transaction or as often as output users?
             user_activity_out[output_user] += 1
             
