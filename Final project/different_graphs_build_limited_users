@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Apr  2 18:19:37 2020
+
+@author: isabel
+"""
+import numpy as np
+import pandas as pd
+import datetime as dt
+from datetime import datetime
+
+
+#transactions  = pd.read_json('transactions_feb_jun_15.json')
+date_after = dt.datetime(2015,2,1)
+date_before = dt.datetime(2015,7,1)
+users_feb_jun_15 = np.genfromtxt("np_user_keys_feb_jun_15_incl_output_users.csv",delimiter=',',dtype=str)
+sampled_users = np.genfromtxt("sampled_users_10seeds.csv", delimiter= ',')
+
+transaction_dataframe2 = pd.read_csv("bitcoin_transactions_dt.csv", sep =";")
+transaction_dataframe2["output_bitcoin_value"] = 0
+transaction_dataframe2["outputs.output_satoshis"] = pd.to_numeric(transaction_dataframe2["outputs.output_satoshis"], errors='coerce')
+transaction_dataframe2["output_bitcoin_value"] = 0.00000001 * transaction_dataframe2["outputs.output_satoshis"]
+transaction_dataframe2["timestamp"] = pd.to_datetime(transaction_dataframe2["timestamp"], format = '%d %b %Y')
+
+#drop rows with incomplete transaction data
+transaction_dataframe_without_null2 = transaction_dataframe2.dropna()
+transaction_dataframe_without_null2 = transaction_dataframe_without_null2.reset_index(drop = True)
+
+number_of_compelte_transactions = len(transaction_dataframe_without_null2)
+
+df_transactioncounts_inputkeys = transaction_dataframe_without_null2["inputs.input_pubkey_base58"].value_counts()
+unique_addresses = transaction_dataframe_without_null2["inputs.input_pubkey_base58"].nunique()
+
+number_of_unique_transactioIDs = len(transaction_dataframe_without_null2["transaction_id"].value_counts())
+
+#%%
+n_slice = 1000
+sorted_transactions2 = transaction_dataframe_without_null2.sort_values(by ='timestamp')
+
+df_half = sorted_transactions2[sorted_transactions2["timestamp"]>=date_after]
+slice_trans = df_half = df_half[df_half["timestamp"]<date_before]
+
+unique_keys_in = slice_trans["inputs.input_pubkey_base58"].unique()
+unique_keys_out = slice_trans["outputs.output_pubkey_base58"].unique()
+unique_keys = np.unique(np.union1d(unique_keys_in, unique_keys_out))
+n_new_keys_out = len(unique_keys) + 1 - len(unique_keys_in)
+
+
+
+
+delta_days = (date_before - date_after).days
+day = date_after
+max_user = users_feb_jun_15.shape[0]
+
+
+#%%
+n_users = sampled_users.shape[0]
+graph_activity = np.zeros((n_users,n_users,delta_days))
+graph_value = np.zeros((n_users,n_users,delta_days))
+graph_dict = {}
+for key in range(delta_days):
+    graph_dict[key] = []
+
+
+user_activity_in = np.zeros((n_users))
+user_activity_in2 = np.zeros((n_users)) #don't know what is fair: count input users once per transaction or as often as output users?
+user_activity_out = np.zeros((n_users))
+
+
+for i in range(delta_days):
+    print(datetime.now())
+    print(i)
+    day = date_after +dt.timedelta(days=i)
+    day_trans = slice_trans[slice_trans["timestamp"]==day]
+    trans_keys = day_trans["transaction_id"].unique()
+    for tkey in trans_keys:
+        #print(tkey)
+        trans = day_trans[slice_trans["transaction_id"]==tkey]
+        input_key = trans["inputs.input_pubkey_base58"].values[0]
+        input_user =  np.argwhere(users_feb_jun_15 == input_key)[0,0]
+        if input_user not in sampled_users:
+            continue
+        input_user = np.argwhere(sampled_users == input_user)[0,0]
+        user_activity_in[input_user] += 1
+        output_keys = trans["outputs.output_pubkey_base58"].values
+        output_keys = np.unique(output_keys)
+        for okey in output_keys:
+            output_user =  np.argwhere(users_feb_jun_15 == okey)[0,0]
+            if output_user not in sampled_users:
+                continue
+            output_user = np.argwhere(sampled_users == output_user)[0,0]
+            value = np.sum(trans['outputs.output_satoshis'][trans['outputs.output_pubkey_base58'][:] == okey])
+            graph_dict[i].append([input_user, output_user, value])
+            graph_activity[input_user, output_user, i:] += 1
+            graph_value[input_user, output_user, i:] += value
+            user_activity_in2[input_user] += 1 #don't know what is fair: count input users once per transaction or as often as output users?
+            user_activity_out[output_user] += 1
+            
+            
+            
